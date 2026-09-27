@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anki Japanese Grammar Studio</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="top-header">
+      <div class="header-brand">
+        <div class="brand-icon">文法</div>
+        <div class="brand-text">
+          <h1>Anki Japanese Grammar Studio</h1>
+          <p class="subtitle">Local AI Sentence Analyzer & Direct Drive Sync</p>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div id="ai-status-badge" class="status-pill status-offline">
+          <span class="status-dot"></span>
+          <span id="ai-status-text">Checking Local AI...</span>
+        </div>
+        <div id="deck-status-badge" class="status-pill status-neutral">
+          <span id="deck-status-text">No Deck Loaded</span>
+        </div>
+        <button id="btn-quick-sync" class="btn btn-outline-sm" onclick="switchTab('sync')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+          Sync
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('deck')">
+        <span class="tab-icon">📥</span> 1. Deck & Fields
+      </button>
+      <button class="nav-tab" onclick="switchTab('analyze')">
+        <span class="tab-icon">⚡</span> 2. AI Grammar Analysis
+      </button>
+      <button class="nav-tab" onclick="switchTab('study')">
+        <span class="tab-icon">🎴</span> 3. Flashcard Study
+      </button>
+      <button class="nav-tab" onclick="switchTab('sync')">
+        <span class="tab-icon">🔄</span> 4. Direct Drive Sync
+      </button>
+    </nav>
+
+    <!-- Content Sections -->
+    <main class="content-container">
+
+      <!-- TAB 1: DECK & FIELD MAPPING -->
+      <section id="tab-deck" class="tab-content active">
+        <div class="card grid-2">
+          <!-- Upload Area -->
+          <div class="upload-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".apkg" style="display: none;">
+            <div class="upload-icon">📦</div>
+            <h3>Drop your Anki <code>.apkg</code> Deck Here</h3>
+            <p class="muted">Or click to browse from your computer</p>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Browse Files</button>
+              <button class="btn btn-secondary" onclick="loadSampleDeck()">⚡ Load Sample Japanese Deck</button>
+            </div>
+            <p class="subtext">Supports modern and legacy Anki collections (.anki2 & .anki21)</p>
+          </div>
+
+          <!-- Deck Summary & Field Mapping -->
+          <div class="deck-details">
+            <h3 class="section-title">Field Configuration</h3>
+            <p class="muted">Tell the analyzer which card field contains the example sentence.</p>
+
+            <form id="field-mapping-form" onsubmit="saveFieldMappings(event)">
+              <div class="form-group">
+                <label for="select-sentence-field">Example Sentence Field <span class="required">*</span></label>
+                <select id="select-sentence-field" class="form-control" required>
+                  <option value="">-- Upload a deck first --</option>
+                </select>
+                <small class="form-hint">The sentence that will be scanned for JLPT grammar points.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="select-vocab-field">Target Vocabulary Field (Optional)</label>
+                <select id="select-vocab-field" class="form-control">
+                  <option value="">-- None / Select Field --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="select-meaning-field">English Meaning Field (Optional)</label>
+                <select id="select-meaning-field" class="form-control">
+                  <option value="">-- None / Select Field --</option>
+                </select>
+              </div>
+
+              <button type="submit" id="btn-save-fields" class="btn btn-success" disabled>Apply Field Mapping</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Preview Table -->
+        <div class="card preview-card" id="deck-preview-section" style="display: none;">
+          <div class="card-header-row">
+            <h3>Deck Preview (<span id="preview-count">0</span> cards loaded)</h3>
+            <span class="badge" id="preview-deck-name"></span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Target Word</th>
+                  <th>Example Sentence</th>
+                  <th>English Meaning</th>
+                </tr>
+              </thead>
+              <tbody id="preview-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: AI GRAMMAR ANALYSIS -->
+      <section id="tab-analyze" class="tab-content">
+        <div class="card">
+          <div class="card-header-row">
+            <div>
+              <h2 class="section-title">Batch Grammar Analysis</h2>
+              <p class="muted">Scans all example sentences with your Local AI (Ollama / Qwen2.5) or built-in JLPT Knowledge Base.</p>
+            </div>
+            <div class="engine-badge" id="active-engine-badge">
+              Engine: <strong id="engine-name">Detecting...</strong>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-box">
+              <span class="stat-number" id="stat-total-cards">0</span>
+              <span class="stat-label">Total Cards</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number text-success" id="stat-analyzed-cards">0</span>
+              <span class="stat-label">Analyzed Cards</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number text-primary" id="stat-grammar-catalog">35+</span>
+              <span class="stat-label">JLPT Patterns in Catalog</span>
+            </div>
+          </div>
+
+          <div class="batch-controls">
+            <button id="btn-run-analysis" class="btn btn-primary btn-lg" onclick="runBatchAnalysis()">
+              ⚡ Start Grammar Analysis
+            </button>
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-force-offline"> Force Fast Offline KB (bypass LLM network call)
+            </label>
+          </div>
+
+          <div id="analysis-progress-container" class="progress-wrapper" style="display: none;">
+            <div class="progress-bar-bg">
+              <div id="analysis-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <p id="analysis-status-msg" class="progress-text">Analyzing sentences...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: FLASHCARD STUDY MODE -->
+      <section id="tab-study" class="tab-content">
+        <div class="study-container">
+          <div class="study-toolbar">
+            <div class="card-progress">
+              Card <span id="current-card-idx">1</span> of <span id="total-study-cards">0</span>
+            </div>
+            <div class="jlpt-legend">
+              <span class="legend-chip jlpt-n5">N5</span>
+              <span class="legend-chip jlpt-n4">N4</span>
+              <span class="legend-chip jlpt-n3">N3</span>
+              <span class="legend-chip jlpt-n2">N2</span>
+              <span class="legend-chip jlpt-n1">N1</span>
+            </div>
+          </div>
+
+          <!-- Flashcard Element -->
+          <div class="flashcard" id="active-flashcard" onclick="flipCard()">
+            <div class="flashcard-inner" id="card-inner">
+              <!-- Front Side -->
+              <div class="flashcard-face flashcard-front">
+                <span class="face-tag">FRONT</span>
+                <div class="vocab-display" id="card-vocab">出かける</div>
+                <div class="sentence-display" id="card-sentence-front">
+                  雨が降っているにもかかわらず、彼は出かけた。
+                </div>
+                <div class="flip-hint">Click card or press Space to reveal grammar & meaning</div>
+              </div>
+
+              <!-- Back Side -->
+              <div class="flashcard-face flashcard-back">
+                <span class="face-tag">BACK</span>
+                <div class="meaning-display" id="card-meaning">to go out; to depart</div>
+                <div class="sentence-english" id="card-sentence-english">He went out despite the rain.</div>
+                
+                <hr class="card-divider">
+
+                <div class="grammar-breakdown-section">
+                  <h4>Identified Grammar Points:</h4>
+                  <div id="grammar-breakdown-list" class="grammar-list">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation & Grading Controls -->
+          <div class="study-controls">
+            <button class="btn btn-outline" onclick="prevCard()">← Previous</button>
+            <div class="grade-buttons" id="grade-buttons" style="display: none;">
+              <button class="btn btn-danger" onclick="gradeCard('again')">Again (1d)</button>
+              <button class="btn btn-warning" onclick="gradeCard('hard')">Hard (2d)</button>
+              <button class="btn btn-primary" onclick="gradeCard('good')">Good (4d)</button>
+              <button class="btn btn-success" onclick="gradeCard('easy')">Easy (7d)</button>
+            </div>
+            <button class="btn btn-outline" onclick="nextCard()">Next →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: DIRECT DRIVE SYNC -->
+      <section id="tab-sync" class="tab-content">
+        <div class="card">
+          <div class="card-header-row">
+            <div>
+              <h2 class="section-title">Direct Drive Sync</h2>
+              <p class="muted">Sync your annotated cards and study history directly to Google Drive, iCloud, OneDrive, or a local folder without a central server.</p>
+            </div>
+            <div class="sync-icon-badge">📁</div>
+          </div>
+
+          <div class="form-group">
+            <label for="drive-path-input">Target Drive / Cloud Directory</label>
+            <div class="input-with-button">
+              <input type="text" id="drive-path-input" class="form-control" placeholder="~/Google Drive/AnkiSync or ~/Documents/AnkiSync" value="~/Documents/AnkiGrammarSync">
+              <button class="btn btn-secondary" onclick="checkDrivePath()">Verify Path</button>
+            </div>
+            <small class="form-hint">Tip: If you use the Google Drive or OneDrive desktop app, select that synced folder to sync seamlessly to your Android phone.</small>
+          </div>
+
+          <div id="drive-status-box" class="info-box info-neutral">
+            <div id="drive-status-details">Path not yet verified. Click "Verify Path" to check folder readiness.</div>
+          </div>
+
+          <div class="sync-actions-row">
+            <button class="btn btn-primary btn-lg" onclick="triggerExportSync()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              Export & Sync to Drive
+            </button>
+            <button class="btn btn-outline btn-lg" onclick="triggerImportSync()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Import from Drive
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Global Hover Popover for Grammar Points -->
+    <div id="grammar-popover" class="grammar-popover" style="display: none;">
+      <div class="popover-header">
+        <span id="popover-pattern" class="popover-title">〜にもかかわらず</span>
+        <span id="popover-jlpt" class="legend-chip jlpt-n3">N3</span>
+      </div>
+      <div class="popover-body">
+        <div class="popover-field">
+          <strong>Meaning:</strong> <span id="popover-meaning">despite; in spite of</span>
+        </div>
+        <div class="popover-field">
+          <strong>Formation:</strong> <code id="popover-formation">Verb Plain + にもかかわらず</code>
+        </div>
+        <div class="popover-explanation" id="popover-explanation">
+          Indicates an unexpected result contrary to expectations.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
