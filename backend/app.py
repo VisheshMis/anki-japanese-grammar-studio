@@ -205,11 +205,12 @@ def upload_apkg():
         STATE["notes"] = []
         STATE["analyzed_count"] = 0
 
-        # Auto-detect field candidates
-        candidate_fields = set()
+        # Auto-detect field candidates - preserve field order and eliminate duplicates
+        candidate_fields = []
         for m in parsed["models"]:
             for f in m.get("fields", []):
-                candidate_fields.add(f)
+                if f and f not in candidate_fields:
+                    candidate_fields.append(f)
 
         # Populate internal cards
         for n in parsed["notes"]:
@@ -227,10 +228,10 @@ def upload_apkg():
                 "repetitions": 0,
             })
 
-        # Try sensible defaults for field mapping
-        sentence_f = next((f for f in candidate_fields if any(w in f.lower() for w in ["sentence", "expression", "text", "german", "front", "japanese"])), "")
-        vocab_f = next((f for f in candidate_fields if any(w in f.lower() for w in ["vocab", "word", "kanji", "front"])), "")
-        meaning_f = next((f for f in candidate_fields if any(w in f.lower() for w in ["meaning", "english", "back", "translation"])), "")
+        # Try sensible defaults for field mapping without duplicate assignment
+        sentence_f = next((f for f in candidate_fields if any(w in f.lower() for w in ["sentence", "expression", "text", "german", "japanese", "front"])), candidate_fields[0] if candidate_fields else "")
+        vocab_f = next((f for f in candidate_fields if f != sentence_f and any(w in f.lower() for w in ["vocab", "word", "kanji", "front", "title"])), "")
+        meaning_f = next((f for f in candidate_fields if f not in [sentence_f, vocab_f] and any(w in f.lower() for w in ["meaning", "english", "definition", "translation", "back"])), "")
 
         STATE["field_mappings"] = {
             "sentence_field": sentence_f,
@@ -247,7 +248,7 @@ def upload_apkg():
             "deck_name": STATE["deck_name"],
             "total_cards": len(STATE["notes"]),
             "models": parsed["models"],
-            "available_fields": list(candidate_fields),
+            "available_fields": candidate_fields,
             "field_mappings": STATE["field_mappings"],
             "preview_cards": STATE["notes"][:5],
         })
@@ -299,6 +300,42 @@ def load_sample_deck():
     })
 
 
+def _clean_text(raw_val: str) -> str:
+    """Cleans Anki audio/sound tags, excessive HTML wrappers, and normalizes whitespace."""
+    if not raw_val:
+        return ""
+    import re
+    # Remove sound tags like [sound:foo.mp3]
+    val = re.sub(r'\[sound:[^\]]+\]', '', str(raw_val))
+    # Replace <br> with space
+    val = re.sub(r'<br\s*/?>', ' ', val, flags=re.IGNORECASE)
+    # Strip HTML tags
+    val = re.sub(r'<[^>]+>', '', val)
+    return val.strip()
+
+
+def _apply_field_mapping(force_reset: bool = False):
+    s_field = STATE["field_mappings"].get("sentence_field", "")
+    v_field = STATE["field_mappings"].get("vocab_field", "")
+    m_field = STATE["field_mappings"].get("meaning_field", "")
+
+    for note in STATE["notes"]:
+        fields = note.get("fields", {})
+        prev_sentence = note.get("original_sentence", "")
+        new_sentence = _clean_text(fields.get(s_field, "")) if s_field else ""
+
+        note["original_sentence"] = new_sentence
+        note["target_word"] = _clean_text(fields.get(v_field, "")) if v_field else ""
+        note["meaning"] = _clean_text(fields.get(m_field, "")) if m_field else ""
+
+        # If sentence text changed or force_reset, clear previously cached grammar annotations
+        if force_reset or new_sentence != prev_sentence:
+            note["annotated_html"] = ""
+            note["grammar_points"] = []
+
+    STATE["analyzed_count"] = sum(1 for n in STATE["notes"] if n.get("annotated_html"))
+
+
 @app.route("/api/configure-fields", methods=["POST"])
 def configure_fields():
     data = request.json or {}
@@ -315,27 +352,14 @@ def configure_fields():
         "meaning_field": meaning_field,
     }
 
-    _apply_field_mapping()
+    _apply_field_mapping(force_reset=True)
 
     return jsonify({
         "success": True,
         "field_mappings": STATE["field_mappings"],
-        "preview_cards": STATE["notes"][:5],
+        "total_cards": len(STATE["notes"]),
+        "preview_cards": STATE["notes"][:10],
     })
-
-
-def _apply_field_mapping():
-    s_field = STATE["field_mappings"]["sentence_field"]
-    v_field = STATE["field_mappings"]["vocab_field"]
-    m_field = STATE["field_mappings"]["meaning_field"]
-
-    for note in STATE["notes"]:
-        fields = note.get("fields", {})
-        note["original_sentence"] = fields.get(s_field, "")
-        if v_field:
-            note["target_word"] = fields.get(v_field, "")
-        if m_field:
-            note["meaning"] = fields.get(m_field, "")
 
 
 @app.route("/api/analyze-batch", methods=["POST"])

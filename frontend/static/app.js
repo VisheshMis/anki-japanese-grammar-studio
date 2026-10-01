@@ -178,6 +178,14 @@ async function loadSampleDeck() {
   }
 }
 
+function cleanText(text) {
+  if (!text) return '';
+  let s = String(text).replace(/\[sound:[^\]]+\]/g, '');
+  s = s.replace(/<br\s*\/?>/gi, ' ');
+  s = s.replace(/<[^>]+>/g, '');
+  return s.trim();
+}
+
 function onDeckLoaded(data) {
   appState.deckLoaded = true;
   appState.deckName = data.deck_name;
@@ -191,6 +199,11 @@ function onDeckLoaded(data) {
 
   document.getElementById('btn-save-fields').disabled = false;
 
+  // Render Card #1 Field Inspector
+  if (data.preview_cards && data.preview_cards.length > 0) {
+    renderCardInspector(data.preview_cards[0]);
+  }
+
   // Show preview
   renderPreviewTable(data.preview_cards);
   updateHeaderBadges();
@@ -203,7 +216,7 @@ function populateFieldDropdown(elementId, fields, selectedValue) {
 
   const defaultOpt = document.createElement('option');
   defaultOpt.value = '';
-  defaultOpt.textContent = '-- Select Field --';
+  defaultOpt.textContent = '-- None / Select Field --';
   select.appendChild(defaultOpt);
 
   fields.forEach(f => {
@@ -215,32 +228,102 @@ function populateFieldDropdown(elementId, fields, selectedValue) {
   });
 }
 
-function renderPreviewTable(cards) {
-  const previewSection = document.getElementById('deck-preview-section');
-  const tbody = document.getElementById('preview-table-body');
-  document.getElementById('preview-count').textContent = cards.length;
-  document.getElementById('preview-deck-name').textContent = appState.deckName;
+function updateTableHeaderBadges() {
+  const sField = appState.fieldMappings.sentence_field || '';
+  const vField = appState.fieldMappings.vocab_field || '';
+  const mField = appState.fieldMappings.meaning_field || '';
 
-  tbody.innerHTML = '';
-  cards.forEach((card, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td style="font-weight: 700; color: #38bdf8;">${card.target_word || '-'}</td>
-      <td style="font-family: var(--font-japanese);">${card.original_sentence || '-'}</td>
-      <td style="color: var(--text-muted);">${card.meaning || '-'}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+  const hSentence = document.getElementById('header-sentence-field');
+  const hVocab = document.getElementById('header-vocab-field');
+  const hMeaning = document.getElementById('header-meaning-field');
 
-  previewSection.style.display = 'block';
+  if (hSentence) hSentence.textContent = sField ? `[${sField}]` : '[Not selected]';
+  if (hVocab) hVocab.textContent = vField ? `[${vField}]` : '[None]';
+  if (hMeaning) hMeaning.textContent = mField ? `[${mField}]` : '[None]';
 }
 
-async function saveFieldMappings(e) {
-  e.preventDefault();
+function renderCardInspector(card) {
+  const inspector = document.getElementById('card-fields-inspector');
+  const list = document.getElementById('inspector-fields-list');
+  if (!card || !card.fields) {
+    if (inspector) inspector.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = '';
+  Object.entries(card.fields).forEach(([fname, rawval]) => {
+    const cleanval = cleanText(rawval);
+    const row = document.createElement('div');
+    row.className = 'inspector-field-row';
+    row.innerHTML = `
+      <span class="inspector-name">${fname}</span>
+      <span class="inspector-val" title="${cleanval || '(empty)'}">${cleanval || '<em style="color:#64748b">(empty)</em>'}</span>
+      <div class="inspector-actions">
+        <button type="button" class="btn-tag" onclick="assignField('${fname}', 'sentence')">Sentence</button>
+        <button type="button" class="btn-tag" onclick="assignField('${fname}', 'vocab')">Vocab</button>
+        <button type="button" class="btn-tag" onclick="assignField('${fname}', 'meaning')">Meaning</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  inspector.style.display = 'block';
+}
+
+function assignField(fieldName, targetSlot) {
+  if (targetSlot === 'sentence') {
+    document.getElementById('select-sentence-field').value = fieldName;
+  } else if (targetSlot === 'vocab') {
+    document.getElementById('select-vocab-field').value = fieldName;
+  } else if (targetSlot === 'meaning') {
+    document.getElementById('select-meaning-field').value = fieldName;
+  }
+  onFieldDropdownChanged();
+}
+
+function onFieldDropdownChanged() {
   const sField = document.getElementById('select-sentence-field').value;
   const vField = document.getElementById('select-vocab-field').value;
   const mField = document.getElementById('select-meaning-field').value;
+
+  appState.fieldMappings = {
+    sentence_field: sField,
+    vocab_field: vField,
+    meaning_field: mField
+  };
+
+  // Immediately update cards in memory for instant feedback
+  if (appState.cards && appState.cards.length > 0) {
+    appState.cards.forEach(card => {
+      const f = card.fields || {};
+      card.original_sentence = cleanText(f[sField] || '');
+      card.target_word = vField ? cleanText(f[vField] || '') : '';
+      card.meaning = mField ? cleanText(f[mField] || '') : '';
+      card.annotated_html = ''; // Reset any stale annotations
+      card.grammar_points = [];
+    });
+    appState.analyzedCount = 0;
+    renderPreviewTable(appState.cards);
+    updateAnalyzeEngineBadge();
+  }
+
+  // Flash live toast
+  const toast = document.getElementById('field-saved-toast');
+  if (toast) {
+    toast.style.display = 'inline-block';
+    toast.textContent = '✓ Updated live';
+    setTimeout(() => { toast.style.display = 'none'; }, 2000);
+  }
+
+  // Sync to backend asynchronously
+  syncFieldMappingsToBackend();
+}
+
+async function syncFieldMappingsToBackend() {
+  const sField = appState.fieldMappings.sentence_field;
+  const vField = appState.fieldMappings.vocab_field;
+  const mField = appState.fieldMappings.meaning_field;
+
+  if (!sField) return;
 
   try {
     const res = await fetch('/api/configure-fields', {
@@ -253,14 +336,54 @@ async function saveFieldMappings(e) {
       })
     });
     const data = await res.json();
-    if (data.success) {
-      alert('Field mappings applied successfully!');
-      await loadCards();
-      switchTab('analyze');
+    if (data.success && data.preview_cards) {
+      appState.cards = data.preview_cards;
     }
   } catch (err) {
-    alert(`Failed to save field mappings: ${err}`);
+    console.error('Failed to sync field mappings:', err);
   }
+}
+
+async function proceedToAnalysis() {
+  await syncFieldMappingsToBackend();
+  switchTab('analyze');
+}
+
+function renderPreviewTable(cards) {
+  const previewSection = document.getElementById('deck-preview-section');
+  const tbody = document.getElementById('preview-table-body');
+  document.getElementById('preview-count').textContent = appState.cards.length || cards.length;
+  document.getElementById('preview-deck-name').textContent = appState.deckName;
+
+  updateTableHeaderBadges();
+
+  const sField = appState.fieldMappings.sentence_field;
+  const vField = appState.fieldMappings.vocab_field;
+  const mField = appState.fieldMappings.meaning_field;
+
+  tbody.innerHTML = '';
+  cards.forEach((card, idx) => {
+    const fields = card.fields || {};
+    const sentenceVal = sField ? cleanText(fields[sField]) : (card.original_sentence || '-');
+    const vocabVal = vField ? cleanText(fields[vField]) : (card.target_word || '-');
+    const meaningVal = mField ? cleanText(fields[mField]) : (card.meaning || '-');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td style="font-weight: 700; color: #38bdf8;">${vocabVal || '<span style="color:#64748b">-</span>'}</td>
+      <td style="font-family: var(--font-japanese); font-size: 1.05rem;">${sentenceVal || '<span style="color:#64748b">-</span>'}</td>
+      <td style="color: var(--text-muted);">${meaningVal || '<span style="color:#64748b">-</span>'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  previewSection.style.display = 'block';
+}
+
+async function saveFieldMappings(e) {
+  if (e) e.preventDefault();
+  await proceedToAnalysis();
 }
 
 async function loadCards() {
@@ -345,20 +468,19 @@ function renderCurrentCard() {
   document.getElementById('grade-buttons').style.display = 'none';
 
   // Front content
-  document.getElementById('card-vocab').textContent = card.target_word || 'Vocabulary';
+  document.getElementById('card-vocab').textContent = card.target_word || '';
   
   // Render highlighted sentence if available, or plain sentence
   const frontSentenceContainer = document.getElementById('card-sentence-front');
   if (card.annotated_html) {
     frontSentenceContainer.innerHTML = card.annotated_html;
   } else {
-    frontSentenceContainer.textContent = card.original_sentence || 'No example sentence';
+    frontSentenceContainer.textContent = card.original_sentence || '(No sentence found for this field)';
   }
 
   // Back content
-  document.getElementById('card-meaning').textContent = card.meaning || card.target_word || 'Meaning';
-  document.getElementById('card-sentence-english').textContent =
-    card.fields?.['Sentence_English'] || card.fields?.['English'] || card.meaning || '';
+  document.getElementById('card-meaning').textContent = card.target_word || 'Vocabulary';
+  document.getElementById('card-sentence-english').textContent = card.meaning || '(No meaning field selected)';
 
   // Grammar breakdown list on back
   const breakdownList = document.getElementById('grammar-breakdown-list');

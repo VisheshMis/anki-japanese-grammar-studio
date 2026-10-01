@@ -18,11 +18,11 @@
 		</data>
 		<key>Resources/backend/__pycache__/app.cpython-313.pyc</key>
 		<data>
-		/u5KSYqJsB4/+8Qy7e9Y2PmkJV4=
+		tzKaOgpFfw8hoBjE7cP7RkHBCgE=
 		</data>
 		<key>Resources/backend/__pycache__/deck_parser.cpython-313.pyc</key>
 		<data>
-		RK82H7ThueST7iVXrGZLMWFn3YE=
+		/PnxSDjjV28GmvQIpSO/6yX0Nr8=
 		</data>
 		<key>Resources/backend/__pycache__/grammar_kb.cpython-313.pyc</key>
 		<data>
@@ -38,11 +38,11 @@
 		</data>
 		<key>Resources/backend/app.py</key>
 		<data>
-		DR9hhAkdjkfhh1dB0W/f80SXbNE=
+		5QlL7Rty5/FKrIQWq3DB3SBtF0k=
 		</data>
 		<key>Resources/backend/deck_parser.py</key>
 		<data>
-		bbQH8QSs2CcdtfgumwLQTCFNVG0=
+		l3eGDySscGBKHXUn2lEaPZScRqE=
 		</data>
 		<key>Resources/backend/grammar_kb.py</key>
 		<data>
@@ -58,19 +58,19 @@
 		</data>
 		<key>Resources/frontend/.DS_Store</key>
 		<data>
-		ygBJ4ZEVbPlxzyuh4R0s70x6J3Y=
+		VCOS9LngGoWOAyaKo4Z8AVavmPA=
 		</data>
 		<key>Resources/frontend/static/app.js</key>
 		<data>
-		zAsCCYoB7+pupphOG1yuzvde9U0=
+		SK+2B49rGc8pPROEYjLBbM3QT/c=
 		</data>
 		<key>Resources/frontend/static/styles.css</key>
 		<data>
-		DGdDwo2wvk1kVLBDKsE/DyL9HcQ=
+		YqllDFxBpi/d3oLBX0HA8dWJdFE=
 		</data>
 		<key>Resources/frontend/templates/index.html</key>
 		<data>
-		GZcihpHsihxYIayAh22bmouRHK0=
+		zrQDzy9c0mdEF/8lZtC4waN7OJM=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -100,14 +100,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			TrHQKhZHkewNnGE1Z4LHb2L8C4rbGz8WlEMCeNAXV9Q=
+			vXg7d6i9Ryvod5JC5F0UU5SLr7NlRqATSkGcIGHmVk8=
 			</data>
 		</dict>
 		<key>Resources/backend/__pycache__/deck_parser.cpython-313.pyc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ZOxhnocQmdlb0eAGl/hGVqN+wC8CoFCTMg8jYWx+3ec=
+			VvssEhVcpPIIo9/itNcvXnMaOk9svbJhmaf7e3AkhKs=
 			</data>
 		</dict>
 		<key>Resources/backend/__pycache__/grammar_kb.cpython-313.pyc</key>
@@ -135,14 +135,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Zj+RZwUOh9sysG/B22jBdq8f8/wUq6s7EQ4OWCjQIrE=
+			JLJ2aNRTBVwDTVgt3XP5Gcp9XTUwTK1InmxqKLPt/MY=
 			</data>
 		</dict>
 		<key>Resources/backend/deck_parser.py</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			A2vrWlCNuPshM6+oI7ykQ1AXaucrmN7k/81ydL0BDqM=
+			YbNJf4U8cRkAOzrAzs+j8aIEYZMRUrPPTHmPpsxITwo=
 			</data>
 		</dict>
 		<key>Resources/backend/grammar_kb.py</key>
@@ -170,21 +170,21 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			G7P/Nz7tq+kfnUPHXlNvfLUon/IeKV/Yntcxp6MeNS4=
+			3DqurdPXiIQRyY0qOQwe5Xw713gbZaGcqQ7PgIDDS4g=
 			</data>
 		</dict>
 		<key>Resources/frontend/static/styles.css</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			/+2BNBEsGJq12cZInwgE0mNKfqf99m9LqrPmUpjWLfs=
+			wSVzrRbsUcdHuOMYyyOkGmdXbsae9OhnJTAE8eJNepI=
 			</data>
 		</dict>
 		<key>Resources/frontend/templates/index.html</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			o+u9WQLU3QcrfbwJMHwOcgCL0vGLjt3mX5Wc5mYwl/A=
+			6BUD7/cYPrUP+JfY3YoQHkQzMRg6eZ6Y0Pbct9kpSio=
 			</data>
 		</dict>
 	</dict>

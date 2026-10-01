@@ -74,12 +74,12 @@
           <!-- Deck Summary & Field Mapping -->
           <div class="deck-details">
             <h3 class="section-title">Field Configuration</h3>
-            <p class="muted">Tell the analyzer which card field contains the example sentence.</p>
+            <p class="muted">Select which card field contains your sentence, target word, and meaning. Updates apply instantly!</p>
 
-            <form id="field-mapping-form" onsubmit="saveFieldMappings(event)">
+            <form id="field-mapping-form" onsubmit="event.preventDefault(); proceedToAnalysis();">
               <div class="form-group">
                 <label for="select-sentence-field">Example Sentence Field <span class="required">*</span></label>
-                <select id="select-sentence-field" class="form-control" required>
+                <select id="select-sentence-field" class="form-control" onchange="onFieldDropdownChanged()" required>
                   <option value="">-- Upload a deck first --</option>
                 </select>
                 <small class="form-hint">The sentence that will be scanned for JLPT grammar points.</small>
@@ -87,37 +87,52 @@
 
               <div class="form-group">
                 <label for="select-vocab-field">Target Vocabulary Field (Optional)</label>
-                <select id="select-vocab-field" class="form-control">
+                <select id="select-vocab-field" class="form-control" onchange="onFieldDropdownChanged()">
                   <option value="">-- None / Select Field --</option>
                 </select>
               </div>
 
               <div class="form-group">
                 <label for="select-meaning-field">English Meaning Field (Optional)</label>
-                <select id="select-meaning-field" class="form-control">
+                <select id="select-meaning-field" class="form-control" onchange="onFieldDropdownChanged()">
                   <option value="">-- None / Select Field --</option>
                 </select>
               </div>
 
-              <button type="submit" id="btn-save-fields" class="btn btn-success" disabled>Apply Field Mapping</button>
+              <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem;">
+                <button type="button" id="btn-save-fields" class="btn btn-primary btn-lg" onclick="proceedToAnalysis()" disabled>
+                  Proceed to AI Analysis →
+                </button>
+                <span id="field-saved-toast" class="field-saved-toast" style="display: none;">✓ Mappings updated</span>
+              </div>
             </form>
+
+            <!-- Card #1 Field Inspector -->
+            <div id="card-fields-inspector" class="card-fields-inspector" style="display: none; margin-top: 1.5rem;">
+              <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem; color: #cbd5e1;">🔍 Card #1 Field Inspector</h4>
+              <p class="muted" style="font-size: 0.8rem; margin-bottom: 0.75rem;">Click a tag to quickly assign it to a slot:</p>
+              <div id="inspector-fields-list" class="inspector-fields-list"></div>
+            </div>
           </div>
         </div>
 
         <!-- Preview Table -->
         <div class="card preview-card" id="deck-preview-section" style="display: none;">
           <div class="card-header-row">
-            <h3>Deck Preview (<span id="preview-count">0</span> cards loaded)</h3>
+            <div>
+              <h3>Deck Preview (<span id="preview-count">0</span> cards loaded)</h3>
+              <p class="muted" style="font-size: 0.85rem;">This live table reflects your exact chosen field mappings.</p>
+            </div>
             <span class="badge" id="preview-deck-name"></span>
           </div>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Target Word</th>
-                  <th>Example Sentence</th>
-                  <th>English Meaning</th>
+                  <th style="width: 50px;">#</th>
+                  <th>Target Word <span id="header-vocab-field" class="field-badge"></span></th>
+                  <th>Example Sentence <span id="header-sentence-field" class="field-badge"></span></th>
+                  <th>English Meaning <span id="header-meaning-field" class="field-badge"></span></th>
                 </tr>
               </thead>
               <tbody id="preview-table-body"></tbody>

@@ -93,7 +93,10 @@ class APKGParser:
                     raw_models_parsed = json.loads(raw_models) if isinstance(raw_models, str) else raw_models
                     for mid_str, m in raw_models_parsed.items():
                         mid = int(mid_str)
-                        field_names = [f.get("name", "") for f in m.get("flds", [])]
+                        raw_flds = m.get("flds", [])
+                        # Ensure fields are strictly ordered by ordinal index 'ord'
+                        sorted_flds = sorted(raw_flds, key=lambda f: f.get("ord", 0))
+                        field_names = [f.get("name", "") for f in sorted_flds]
                         model_info = {
                             "id": mid,
                             "name": m.get("name", f"Model {mid}"),
